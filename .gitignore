@@ -1,0 +1,22 @@
+#files to ignore when pushng to git repository
+
+__pycache__
+*$py.class
+.py[cod]
+*.pyc
+*.pyo
+.env
+env/
+db.sqlite3
+staticfiles/
+media/
+*.log
+.DS_Store
+.vscode/
+.idea/
+.swp
+Thumbs.db
+*.cover
+.build/
+local_settings.py
+coverage/

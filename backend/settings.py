@@ -13,27 +13,22 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import urllib.parse as urlparse
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# SECURITY
+SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-!x30ypkrm+fw^nx0jiq-31n^g&)13xd%$oqp9sbjnlu4=rp3k)')  # fallback for local
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!x30ypkrm+fw^nx0jiq-31n^g&)13xd%$oqp9sbjnlu4=rp3k)'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-
+# Database configuration
 urlparse.uses_netloc.append("mysql")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
     url = urlparse.urlparse(DATABASE_URL)
-
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -43,29 +38,26 @@ if DATABASE_URL:
             "HOST": url.hostname,
             "PORT": url.port or '3306',
             "OPTIONS": {
-                "init_command" : "SET sql_mode= 'STRICT_TRANS_TABLES' "
-        }
+                 'ssl': {'ssl-mode': 'REQUIRED'},
+            }
         }  
-        
     }
 else:
     DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'new',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode= 'STRICT_TRANS_TABLES' "
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'new',
+            'USER': 'root',
+            'PASSWORD': '',
+            'HOST': '127.0.0.1',
+            'PORT': '3306',
+            'OPTIONS': {
+                'init_command': "SET sql_mode= 'STRICT_TRANS_TABLES' "
+            }
         }
     }
-}        
-
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -90,12 +82,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'backend.middleware.APImiddleware',
+    # 'backend.middleware.APImiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    
 ]
-MY_API_KEY = '@Bellajoe'
 
+MY_API_KEY = '@Bellajoe'
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -122,69 +113,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'new',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode= 'STRICT_TRANS_TABLES' "
-        }
-    }
-}
-
-
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'  #this is for the collecting images from the db
-
-
-STATIC_ROOT = BASE_DIR / 'staticfiles' #this is for documentation
+# Static files
+STATIC_URL = 'static/'  
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-REST_FRAMEWORK ={
+
+# REST Framework settings (left exactly as you wrote them)
+REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES':(
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),

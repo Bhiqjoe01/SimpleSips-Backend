@@ -45,6 +45,7 @@ schema_view = get_schema_view(
 def home(request):
     return JsonResponse({"message": "Welcome to the Big Joe E-commerce API"})
 urlpatterns = [
+    path('', home, name='home'),
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api/auth/', include('users.urls')),

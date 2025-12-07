@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from .views import ItemViewSet, FeauturedItem, singleFeaturedItem, CategoryViewSet, CartViewSet
+from .views import ItemViewSet, FeauturedItem, singleFeaturedItem, CategoryViewSet, CartViewSet, OrderViewset
 from django.urls import path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -11,6 +11,7 @@ router = DefaultRouter()
 router.register(r'items', ItemViewSet),
 router.register(r'categories', CategoryViewSet)
 router.register(r'cart', CartViewSet, basename='cart')
+router.register(r'orders', OrderViewset, basename='orders')
 
 urlpatterns = [
     path('items/feautured/', FeauturedItem.as_view(), name='feautured-product'),

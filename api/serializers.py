@@ -189,182 +189,72 @@ class CartSerializer (serializers.ModelSerializer):
             return cart_row
         
         
-class orderSerializer(serializers.ModelSerializer):
+class OrderSerializer(serializers.ModelSerializer):
     """
     Serializer for the Order model.
-    This serializer includes the fields:
-    reference_id
-    user
-    total_amount
-    status
-    order_id
-    created_at
-    updated_at
+
+    - Automatically includes all essential order fields.
+    - `user`, `reference_id`, and `order_id` should be read-only.
+    - The user is attached from the request, not from the frontend.
+    - Used for both creating and retrieving orders.
     """
+
     class Meta:
         model = Order
-        fields = ['reference_id', 'user', 'total_amount', 'status', 'order_id', 'created_at', 'updated_at']
+        fields = "__all__"
+        read_only_fields = ['reference_id', 'user', 'total_amount', 'status', 'order_id', 'created_at', 'updated_at']
         
+class OrderitemSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the OrderItem model.
+
+    - Automatically includes all essential order item fields.
+    - `price`, `sub_total`, and `cart_item` should be read-only.
+    - Used for both creating and retrieving order items.
+    """
+
+    class Meta:
+        model = OrderItem
+        fields = "__all__"
+        read_only_fields = ['price', 'sub_total', 'cart_item', 'order']
+
+    def validate(self, attrs):
+        item = attrs.get('item')
+        quantity = attrs.get('quantity')
+
+        if item and quantity:
+            with transaction.atomic():
+                locked_item = Item.objects.select_for_update().get(pk=item.pk)
+                if locked_item and locked_item.stock < quantity:
+                    raise serializers.ValidationError(f"only {locked_item.stock} items are available in stock")
+
+        return attrs
+
+    def create(self, validated_data):
+        order = self.context.get('order')
+
+        if order.status != 'PENDING':
+            raise serializers.ValidationError("Cannot modify items of an order that is not pending.")
+        item = validated_data.get('item')
+        quantity = validated_data.get('quantity', 1)
+        existing_order_item = order.order_items.filter(item=item).first()
+        if existing_order_item:
+            existing_order_item.quantity += quantity
+            existing_order_item.save()
+            return existing_order_item
+        return OrderItem.objects.create(order=order, **validated_data)
+
+    def update(self, instance, validated_data):
+        order = instance.order
+
+        if order.status != 'PENDING':
+            raise serializers.ValidationError("Cannot modify items of an order that is not pending.")
+
+        item = instance.item
+        new_quantity = validated_data.get('quantity', instance.quantity)
+        diff_quantity = new_quantity - instance.quantity
         
+        if diff_quantity == 0:
+            return instance
+        return super().update(instance, validated_data)
         
-
-                
-    
-  
-    
-  
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-#     from decimal import Decimal
-
-# from django.db import transaction
-# from django.db.models import F
-# from rest_framework import serializers
-# from .models import Cart, Item
-
-# class CartSerializer(serializers.ModelSerializer):
-#     # Extra read-only fields to make API responses friendlier
-#     cartItem_name = serializers.ReadOnlyField(source='cartItem.name')
-#     item_price = serializers.ReadOnlyField(source='cartItem.price')
-#     total_price = serializers.SerializerMethodField()
-
-#     class Meta:
-#         model = Cart
-#         # Expose relevant fields; user & added_at are read-only (set by view/DB)
-#         fields = [
-#             'id', 'cartItem', 'cartItem_name', 'item_price',
-#             'quantity', 'total_price', 'user', 'added_at',
-#         ]
-#         read_only_fields = ['id', 'user', 'added_at', 'cartItem_name', 'item_price', 'total_price']
-
-#     def get_total_price(self, obj):
-#         """Return decimal total price for this cart line (quantity * unit price)."""
-#         # Ensure Decimal arithmetic
-#         return (Decimal(obj.quantity) * Decimal(obj.cartItem.price)).quantize(Decimal('0.01'))
-
-#     def validate_quantity(self, value):
-#         """Field-level validation for quantity (must be >= 1)."""
-#         if value < 1:
-#             raise serializers.ValidationError("Quantity must be at least 1.")
-#         return value
-
-#     def validate(self, data):
-#         """
-#         Object-level validation used on create.
-#         - Ensures the item exists (DRF does this) and stock is enough for the requested quantity
-#         """
-#         # If object-level call during update, 'quantity' may not be in data.
-#         quantity = data.get('quantity', None)
-#         item = data.get('cartItem', None)
-
-#         # If serializer is being used to update partial data, skip detailed stock check here;
-#         # update() will handle locking/stock checks because we need the existing instance.
-#         if self.instance is not None:
-#             return data
-
-#         if item is None:
-#             raise serializers.ValidationError({"cartItem": "This field is required."})
-
-#         if quantity is None:
-#             quantity = 1
-
-#         if item.stock < quantity:
-#             raise serializers.ValidationError(f"Only {item.stock} left in stock for '{item.name}'.")
-
-#         return data
-
-#     def create(self, validated_data):
-#         """
-#         Add an item to the user's cart. If a cart line already exists for this user+item,
-#         increase its quantity. All stock modifications happen inside an atomic transaction
-#         and we use select_for_update() to lock the item row (prevents race conditions).
-#         """
-#         request = self.context.get('request')
-#         if request is None or not hasattr(request, 'user'):
-#             raise serializers.ValidationError("Request user is required.")
-
-#         user = request.user
-#         item = validated_data['cartItem']
-#         add_quantity = validated_data.get('quantity', 1)
-
-#         with transaction.atomic():
-#             # Lock the item row so concurrent requests update stock safely
-#             locked_item = Item.objects.select_for_update().get(pk=item.pk)
-
-#             if locked_item.stock < add_quantity:
-#                 raise serializers.ValidationError(f"Only {locked_item.stock} left in stock for '{locked_item.name}'.")
-
-#             # Try to fetch existing cart line
-#             cart_line, created = Cart.objects.select_for_update().get_or_create(
-#                 user=user,
-#                 cartItem=locked_item,
-#                 defaults={'quantity': add_quantity}
-#             )
-
-#             if not created:
-#                 # If it already exists, add the new quantity
-#                 new_quantity = cart_line.quantity + add_quantity
-
-#                 # No need to check total against some original stock here because locked_item.stock
-#                 # already reflects remaining stock after previous reservations.
-#                 if locked_item.stock < add_quantity:
-#                     raise serializers.ValidationError(f"Cannot add {add_quantity} more. Only {locked_item.stock} left in stock.")
-
-#                 cart_line.quantity = new_quantity
-#                 cart_line.save()
-#             else:
-#                 cart_line.save()
-
-#             # Deduct only the added quantity from stock (existing reserved qty already deducted earlier)
-#             locked_item.stock = F('stock') - add_quantity
-#             locked_item.save()
-
-#         # Refresh from DB to get actual numeric value if F() was used
-#         cart_line.refresh_from_db()
-#         return cart_line
-
-#     def update(self, instance, validated_data):
-#         """
-#         Update a cart line's quantity. This must:
-#         - Lock the related Item row
-#         - Compute the difference between new and old quantity
-#         - If increasing, ensure enough stock and deduct the difference
-#         - If decreasing, return the difference back to stock
-#         """
-#         new_quantity = validated_data.get('quantity', instance.quantity)
-
-#         if new_quantity < 1:
-#             raise serializers.ValidationError("Quantity must be at least 1. To remove an item, use DELETE on the cart line.")
-
-#         with transaction.atomic():
-#             # Lock item row for safe stock update
-#             locked_item = Item.objects.select_for_update().get(pk=instance.cartItem.pk)
-
-#             diff = new_quantity - instance.quantity  # positive -> need more stock; negative -> release stock
-
-#             if diff > 0:
-#                 # Need more units
-#                 if locked_item.stock < diff:
-#                     raise serializers.ValidationError(f"Only {locked_item.stock} left in stock for '{locked_item.name}'. Cannot increase by {diff}.")
-#                 # Deduct extra units
-#                 locked_item.stock = F('stock') - diff
-#                 locked_item.save()
-#             elif diff < 0:
-#                 # User decreased quantity — release stock back
-#                 locked_item.stock = F('stock') + abs(diff)
-#                 locked_item.save()
-
-#             # Apply new quantity to cart line
-#             instance.quantity = new_quantity
-#             instance.save()
-
-#         instance.refresh_from_db()
-#         return instance

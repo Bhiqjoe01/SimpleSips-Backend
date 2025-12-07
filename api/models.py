@@ -103,7 +103,7 @@ class OrderItem (models.Model):
         
         self.sub_total = self.quantity * self.price
         super().save(*args, **kwargs)
-        self.order.total_amount = sum(self.order.order_items for x in self.order.order_items.all())
+        self.order.total_amount = sum(x.sub_total for x in self.order.order_items.all())
         self.order.save(update_fields=['total_amount'])
     
     

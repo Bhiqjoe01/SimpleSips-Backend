@@ -20,14 +20,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-!x30ypkrm+fw^nx0jiq-31n^g&)13xd%$oqp9sbjnlu4=rp3k)')  # fallback for local
 DEBUG = os.environ.get("DEBUG", "False") == "True"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+# DEBUG = True
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost,.onrender.com").split(",")
 
 
 # Database configuration
 urlparse.uses_netloc.append("mysql")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if DATABASE_URL:
+if not DEBUG:
     url = urlparse.urlparse(DATABASE_URL)
     DATABASES = {
         "default": {
@@ -138,8 +139,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES':(
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEAFAULT_PAGINATION_CLASS': (
-        'rest_framework.permission.isAuthenticated',
     ),
 }

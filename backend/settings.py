@@ -14,14 +14,13 @@ from pathlib import Path
 import os
 import urllib.parse as urlparse
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY
+
 SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-!x30ypkrm+fw^nx0jiq-31n^g&)13xd%$oqp9sbjnlu4=rp3k)')  # fallback for local
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 # DEBUG = True
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost,.onrender.com").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost", "simplesips-c702.onrender.com").split(",")
 
 
 # Database configuration
